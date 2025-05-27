@@ -3,6 +3,9 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { FaPaperPlane } from 'react-icons/fa';
+import { generateTripPDF } from '../utils/generatePDF';
+// import { generateTripDOCX , downloadDOCX} from '../utils/generateDocx';
+
 
 export default function DriverDashboard() {
   const { user } = useAuth();
@@ -14,19 +17,69 @@ export default function DriverDashboard() {
     setTrips(confirmed.filter(t => t.driverName === user?.driverName && t.company === user?.company));
   }, [user]);
 
-  const handleSubmitReport = (trip) => {
-    const report = {
-      ...trip,
-      id: Date.now(),
-      submitted: true
-    };
-    const reports = JSON.parse(localStorage.getItem('reports') || '[]');
-    reports.push(report);
-    localStorage.setItem('reports', JSON.stringify(reports));
-    alert('Report submitted to admin');
+ const handleSubmitReport = async (trip) => {
+   console.log("button is clicked!");
+  const report = {
+    ...trip,
+    id: Date.now(),
+    submitted: true
   };
 
+  console.log("report is submitted!");
+
+  console.log(report);
+
+
+  const reports = JSON.parse(localStorage.getItem('reports') || '[]');
+  reports.push(report);
+  localStorage.setItem('reports', JSON.stringify(reports));
+
+  console.log("reports: " + reports);
+
+    // ✅ Fix: Pass valid dynamic QR code URL
+  const qrUrl = `http://localhost:5173/report/${report.id}`; // Or your deployed domain later
+  await generateTripPDF(report, qrUrl);
+
+  // await generateTripPDF(report); // ⬅ generate PDF and download this line is giving me error as no input text
+  alert('Report submitted and PDF downloaded');
+};
+
+
+
+// const handleSubmitReport = async (trip) => {
+//   const report = {
+//     ...trip,
+//     id: Date.now(),
+//     submitted: true
+//   };
+
+//   // Save to local storage
+//   const reports = JSON.parse(localStorage.getItem('reports') || []);
+//   reports.push(report);
+//   localStorage.setItem('reports', JSON.stringify(reports));
+
+//   // Generate and download DOCX
+//   try {
+//     const { doc, Packer } = await generateTripDOCX(report);
+//     await downloadDOCX(doc, Packer, `trip_report_${report.id}.docx`);
+//     alert('Report submitted and DOCX downloaded');
+//   } catch (error) {
+//     console.error('Error generating DOCX:', error);
+//     alert('Failed to generate report');
+//   }
+// };
+
   const handleAddTrip = () => {
+
+    // Fetch vehicle assigned to driver
+    const vehicles = JSON.parse(localStorage.getItem('vehicles') || '[]');
+    const assigned = vehicles.find(v => v.assignedTo === user?.driverName);
+
+    if (!assigned) {
+      alert('No vehicle assigned to you by admin.');
+      return;
+    }
+
     const tripId = Date.now();
     navigate(`/driver-trip/${tripId}`);
   };
@@ -39,6 +92,18 @@ export default function DriverDashboard() {
           <p className="text-lg text-gray-700">
             Logged in as <span className="font-semibold">{user?.driverName}</span> from <span className="font-semibold">{user?.company}</span>
           </p>
+          {(() => {
+            const vehicles = JSON.parse(localStorage.getItem('vehicles') || '[]');
+            const assigned = vehicles.find(v => v.assignedTo === user?.driverName);
+            return (
+              <p className="text-md text-gray-600">
+                Assigned Vehicle:{' '}
+                <span className="font-medium">
+                  {assigned ? `${assigned.model} (${assigned.registrationNumber})` : 'None'}
+                </span>
+              </p>
+            );
+          })()}
         </div>
 
         <div className="bg-white shadow-md rounded-lg p-6">

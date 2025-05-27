@@ -1,6 +1,6 @@
 // src/pages/DriverTrip.jsx
 import { useParams, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import PassengerForm from '../components/PassengerForm';
 import { useAuth } from '../context/AuthContext';
 
@@ -9,71 +9,102 @@ export default function DriverTrip() {
   const navigate = useNavigate();
   const { user } = useAuth();
 
+  const [assignedVehicle, setAssignedVehicle] = useState(null);
   const [passengers, setPassengers] = useState([]);
   const [isSaved, setIsSaved] = useState(false);
-  const [isConfirmed, setIsConfirmed] = useState(false);
+
   const [tripData, setTripData] = useState({
     tripDate: '',
-    totalPassengers: ''
+    totalPassengers: '',
   });
 
+  // 🚗 Get assigned vehicle on mount
+  useEffect(() => {
+    const vehicles = JSON.parse(localStorage.getItem('vehicles') || '[]');
+    const assigned = vehicles.find(v => v.assignedTo === user?.driverName);
+    if (!assigned) {
+      alert('You are not assigned to a vehicle by admin.');
+      navigate('/driver-dashboard');
+    } else {
+      setAssignedVehicle(assigned);
+    }
+  }, [user, navigate]);
+
+  // ➕ Add Passenger
   const addPassenger = (p) => {
-    if (!p.name || !p.from || !p.to || !p.idNumber) {
-      alert('Please fill in all required fields: Name, ID Number, From, To');
-      return;
+    const { name, from, to, idNumber } = p;
+
+    if (!name || !from || !to || !idNumber) {
+      return alert('Please fill all required fields: Name, ID Number, From, To');
     }
 
-    if (passengers.length >= parseInt(tripData.totalPassengers)) {
-      alert(`Cannot add more than ${tripData.totalPassengers} passengers.`);
-      return;
+    if (passengers.length >= parseInt(tripData.totalPassengers || 0)) {
+      return alert(`Cannot add more than ${tripData.totalPassengers} passengers.`);
     }
 
     setPassengers([...passengers, p]);
   };
 
+  // ❌ Delete Passenger
   const deletePassenger = (index) => {
     const updated = passengers.filter((_, i) => i !== index);
     setPassengers(updated);
   };
 
+  // 💾 Save trip setup
   const handleSaveTrip = () => {
     if (!tripData.tripDate || !tripData.totalPassengers) {
-      alert('Please enter Trip Date and Total Passengers before saving.');
+      alert('Please enter both Trip Date and Total Passengers.');
       return;
     }
+
+    if (parseInt(tripData.totalPassengers) <= 0) {
+      alert('Total Passengers must be greater than 0.');
+      return;
+    }
+
     setIsSaved(true);
   };
 
+  // ✅ Confirm and store trip
   const handleConfirmTrip = () => {
     if (passengers.length !== parseInt(tripData.totalPassengers)) {
-      alert(`You must add exactly ${tripData.totalPassengers} passengers.`);
-      return;
+      return alert(`You must add exactly ${tripData.totalPassengers} passengers before confirming.`);
     }
 
     const confirmedTrips = JSON.parse(localStorage.getItem('confirmedTrips') || '[]');
+
     confirmedTrips.push({
       id: tripId,
       driverName: user.driverName,
-      registrationNumber: user.registrationNumber,
+      residencyNumber: user.residencyNumber,
       company: user.company,
+      registrationNumber: assignedVehicle.registrationNumber,
+      vehicleType: assignedVehicle.model,
       tripDate: tripData.tripDate,
-      passengers
+      passengers,
+      submitted: false,
     });
-    localStorage.setItem('confirmedTrips', JSON.stringify(confirmedTrips));
 
+    localStorage.setItem('confirmedTrips', JSON.stringify(confirmedTrips));
     navigate('/driver-dashboard');
   };
 
   return (
     <div className="min-h-screen bg-blue-50 p-6">
       <div className="max-w-5xl mx-auto space-y-6">
+        {/* Top info */}
         <div className="text-center">
           <h1 className="text-3xl font-bold text-blue-700">Trip Details</h1>
           <p className="text-lg text-gray-700">
-            Driver: <span className="font-semibold">{user?.driverName}</span> — Reg#: <span className="font-semibold">{user?.registrationNumber}</span> — Company: <span className="font-semibold">{user?.company}</span>
+            Driver: <span className="font-semibold">{user?.driverName}</span> — 
+            Reg#: <span className="font-semibold">{assignedVehicle?.registrationNumber}</span> — 
+            Vehicle: <span className="font-semibold">{assignedVehicle?.model}</span> — 
+            Company: <span className="font-semibold">{user?.company}</span>
           </p>
         </div>
 
+        {/* Trip Form */}
         <div className="bg-white shadow-md rounded-lg p-6">
           <div className="mb-4 grid grid-cols-1 md:grid-cols-2 gap-4">
             <input
@@ -82,6 +113,7 @@ export default function DriverTrip() {
               onChange={(e) => setTripData({ ...tripData, tripDate: e.target.value })}
               className="border px-4 py-2 rounded w-full"
               placeholder="Trip Date"
+              required
             />
             <input
               type="number"
@@ -89,6 +121,8 @@ export default function DriverTrip() {
               onChange={(e) => setTripData({ ...tripData, totalPassengers: e.target.value })}
               className="border px-4 py-2 rounded w-full"
               placeholder="Total Passengers"
+              min="1"
+              required
             />
           </div>
 
@@ -104,6 +138,7 @@ export default function DriverTrip() {
           )}
         </div>
 
+        {/* Passenger Form + Table */}
         {isSaved && (
           <div className="bg-white shadow-md rounded-lg p-6">
             <h2 className="text-xl font-semibold text-blue-600 mb-4">Passengers</h2>
@@ -155,4 +190,3 @@ export default function DriverTrip() {
     </div>
   );
 }
-  

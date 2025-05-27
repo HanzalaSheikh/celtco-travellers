@@ -6,8 +6,16 @@ import DriverDashboard from './pages/DriverDashboard';
 import DriverTrip from './pages/DriverTrip';
 import AdminLogin from './pages/AdminLogin';
 import AdminSignup from './pages/AdminSignup';
-import AdminDashboard from './pages/AdminDashboard';
 import ProtectedRoute from './components/ProtectedRoute';
+import AdminDashboardLayout from './pages/admin/AdminDashboard';
+import Overview from './pages/admin/Dashboard';
+import DriversPage from './pages/admin/DriversPage';
+import VehiclesPage from './pages/admin/VehiclesPage';
+import ReportsPage from './pages/admin/ReportsPage';
+import PublicReportPage from './pages/PublicReportPage';
+
+
+
 
 export default function App() {
   return (
@@ -34,17 +42,30 @@ export default function App() {
         }
       />
 
+       
+      <Route path="/report/:id" element={<PublicReportPage />} />
+
       {/* Admin routes */}
       <Route path="/admin-login" element={<AdminLogin />} />
       <Route path="/admin-signup" element={<AdminSignup />} />
+
       <Route
         path="/admin-dashboard"
         element={
           <ProtectedRoute allowedRole="admin">
-            <AdminDashboard />
+            <AdminDashboardLayout />
           </ProtectedRoute>
         }
-      />
+      >
+        {/* Nested routes under AdminDashboardLayout */}
+        <Route path="overview" element={<Overview />} />
+        <Route path="drivers" element={<DriversPage />} />
+        <Route path="vehicles" element={<VehiclesPage />} />
+        <Route path="reports" element={<ReportsPage />} />
+      </Route>
     </Routes>
-  );
+ 
+
+
+);
 }
