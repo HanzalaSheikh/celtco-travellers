@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { generateTripPDF } from '../../utils/generatePDF';
+import { generateTripPDF } from '../../utils/generatePdf';
 
 
 export default function ReportsPage() {
@@ -8,9 +8,10 @@ export default function ReportsPage() {
   const [reports, setReports] = useState([]);
 
   const handleViewPDF = async (report) => {
-  const reportUrl = `https://yourdomain.com/report/${report.id}`; // Replace with actual domain
-  await generateTripPDF(report, reportUrl);
-};
+    // Use the actual window location origin for the QR code URL
+    const reportUrl = `${window.location.origin}/report/${report.id}`;
+    await generateTripPDF(report, reportUrl);
+  };
 
   useEffect(() => {
     const storedReports = JSON.parse(localStorage.getItem('reports') || '[]');

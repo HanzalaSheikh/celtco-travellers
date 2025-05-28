@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { FaPaperPlane } from 'react-icons/fa';
-import { generateTripPDF } from '../utils/generatePDF';
+import { generateTripPDF } from '../utils/generatePdf';
 // import { generateTripDOCX , downloadDOCX} from '../utils/generateDocx';
 
 
@@ -18,31 +18,42 @@ export default function DriverDashboard() {
   }, [user]);
 
  const handleSubmitReport = async (trip) => {
-   console.log("button is clicked!");
-  const report = {
-    ...trip,
-    id: Date.now(),
-    submitted: true
-  };
+   try {
+     // Create report object
+     const report = {
+       ...trip,
+       id: Date.now(),
+       submitted: true,
+       submissionDate: new Date().toISOString()
+     };
 
-  console.log("report is submitted!");
+     // Save to local storage
+     const reports = JSON.parse(localStorage.getItem('reports') || '[]');
+     reports.push(report);
+     localStorage.setItem('reports', JSON.stringify(reports));
 
-  console.log(report);
+     // Update the trip status in confirmedTrips
+     const confirmedTrips = JSON.parse(localStorage.getItem('confirmedTrips') || '[]');
+     const updatedTrips = confirmedTrips.map(t => 
+       t.id === trip.id ? { ...t, submitted: true } : t
+     );
+     localStorage.setItem('confirmedTrips', JSON.stringify(updatedTrips));
 
-
-  const reports = JSON.parse(localStorage.getItem('reports') || '[]');
-  reports.push(report);
-  localStorage.setItem('reports', JSON.stringify(reports));
-
-  console.log("reports: " + reports);
-
-    // ✅ Fix: Pass valid dynamic QR code URL
-  const qrUrl = `http://localhost:5173/report/${report.id}`; // Or your deployed domain later
-  await generateTripPDF(report, qrUrl);
-
-  // await generateTripPDF(report); // ⬅ generate PDF and download this line is giving me error as no input text
-  alert('Report submitted and PDF downloaded');
-};
+     // Generate QR code URL for the report
+     const qrUrl = `${window.location.origin}/report/${report.id}`;
+     
+     // Generate and download PDF
+     await generateTripPDF(report, qrUrl);
+     
+     // Update local state
+     setTrips(updatedTrips.filter(t => t.driverName === user?.driverName && t.company === user?.company));
+     
+     alert('Report submitted successfully and PDF downloaded');
+   } catch (error) {
+     console.error('Error submitting report:', error);
+     alert('Failed to submit report. Please try again.');
+   }
+ };
 
 
 
